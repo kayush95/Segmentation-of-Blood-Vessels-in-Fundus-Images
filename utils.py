@@ -43,10 +43,10 @@ class dataset(object):
             #                       max_readers=100, readonly=True)
             self.data = None    # above has been commendted for time being
         elif F.dataset == 'cifar':
-            self.data, self.label = load_cifar()
+            self.data = load_cifar()
 
         elif F.dataset == "retina":
-        	self.data = load_retina()
+        	self.data, self.label = load_retina()
 
         else:
             raise NotImplementedError("Does not support dataset {}".format(F.dataset))
@@ -83,7 +83,7 @@ class dataset(object):
 
 def unison_shuffled_copies(a, b):
     assert len(a) == len(b)
-    p = numpy.random.permutation(len(a))
+    p = np.random.permutation(len(a))
     return a[p], b[p]
 
 def load_retina():

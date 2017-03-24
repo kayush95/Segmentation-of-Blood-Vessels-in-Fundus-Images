@@ -113,15 +113,20 @@ class PreGAN(object):
 		self.ra, self.rb = -1, 1
 
 		for epoch in xrange(F.epoch):
-			batch_idxs = len(data) // F.batch_size
 
 			idx = 0
 			iscore = 0.0, 0.0 # self.get_inception_score()
 			batch_iter = data.batch()
+
+			# z_ = None
+			# sample_ = None
+
 			for sample_images in batch_iter:
 
 				sample_z = np.random.uniform(
 					self.ra, self.rb, [F.batch_size, F.z_dim]).astype(np.float32)
+				# z_ = sample_z
+				# sample_ = sample_images[0]
 
 				# Update D network     ################ updated ############
 				_, summary_str, dlossf = self.sess.run(
@@ -168,6 +173,9 @@ class PreGAN(object):
 				if np.mod(counter, 500) == 2:
 					self.save(F.checkpoint_dir)
 					print("")
+
+			# sample_z = np.random.uniform(
+			# 	self.ra, self.rb, [F.batch_size, F.z_dim]).astype(np.float32)
 
 			samples, d_loss, g_loss = self.sess.run(
 				[self.G_mean, self.d_loss, self.g_loss_actual],
