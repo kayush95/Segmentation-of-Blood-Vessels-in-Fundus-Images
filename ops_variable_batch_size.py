@@ -3,17 +3,9 @@ import numpy as np
 import tensorflow as tf
 
 from tensorflow.python.framework import ops
-from tensorflow.contrib.layers.python.layers import batch_norm
+
 from utils import *
 import os, sys
-
-# import pandas as pd
-import time
-from six.moves import xrange 
-import shutil
-import argparse
-
-
 F = tf.flags.FLAGS
 
 
@@ -61,14 +53,6 @@ class batch_norm(object):
                 x, mean, 1, self.beta, 1, self.epsilon, scale_after_normalization=False)
 
         return normed
-
-
-def instance_norm(x):
-    epsilon = 1e-9
-
-    mean, var = tf.nn.moments(x, [1, 2], keep_dims=True)
-
-    return tf.div(tf.subtract(x, mean), tf.sqrt(tf.add(var, epsilon)))
 
 
 def binary_cross_entropy(preds, targets, name=None):
@@ -141,16 +125,19 @@ def lrelu(x, leak=0.1, name="lrelu"):
   return tf.maximum(x, leak * x)
 
 
-def linear(input_, output_size, scope=None, stddev=0.01, bias_start=0.0, with_w=False):
-    shape = input_.get_shape().as_list()
-    
-    
+def linear(input_, output_size,sess, scope=None, stddev=0.01, bias_start=0.0, with_w=False):
+    #shape = input_.get_shape().as_list()
+    shape = tf.shape(input_)
+    shape_1_t = tf.slice(shape, begin=[1], size=[-1])
+    shape_1 = shape_1_t.eval(sess)
+    print "The difficult shape is:  ", shape_1
+    sys.exit()
     with tf.variable_scope(scope or "Linear"):
-        matrix = tf.get_variable("Matrix", [shape[1], output_size], tf.float32,
+        matrix = tf.get_variable("Matrix", [shape_1, output_size], tf.float32,
                                  tf.contrib.layers.xavier_initializer() if stddev>1000
-                                 else tf.random_normal_initializer(stddev=stddev))     # if was toy modified to run
+                                 else tf.random_normal_initializer(stddev=stddev), validate_shape =False)     # if was toy modified to run
         bias = tf.get_variable("bias", [output_size],
-                               initializer=tf.constant_initializer(bias_start))
+                               initializer=tf.constant_initializer(bias_start), validate_shape =False)
         if with_w:
             return tf.matmul(input_, matrix) + bias, matrix, bias
         else:
@@ -171,21 +158,3 @@ def minibatch_disc(input, num_kernels=10, kernel_size=5, scope="m_bat"):
 
 
 
-# def batch_norm_layer(x,train_phase,scope_bn):
-#     """Adds a Batch Normalization layer from http://arxiv.org/abs/1502.03167.
-#         "Batch Normalization: Accelerating Deep Network Training by Reducing
-#         Internal Covariate Shift"
-#         Sergey Ioffe, Christian Szegedy
-#       Can be used as a normalizer function for conv2d and fully_connected.
-#     """
-    
-#     bn_train = batch_norm(x, decay=0.999, center=True, scale=True, updates_collections=None,
-#     is_training=True, reuse=None, # is this right?
-#     trainable=True, scope=scope_bn)
-    
-#     bn_inference = batch_norm(x, decay=0.999, center=True, scale=True, updates_collections=None,
-#     is_training=False, reuse=True, # is this right?
-#     trainable=True, scope=scope_bn)
-    
-#     z = tf.cond(train_phase, lambda: bn_train, lambda: bn_inference)
-#     return z

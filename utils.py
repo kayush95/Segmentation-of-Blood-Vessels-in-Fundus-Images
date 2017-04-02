@@ -22,6 +22,7 @@ get_stddev = lambda x, k_h, k_w: 1 / math.sqrt(k_w * k_h * x.get_shape()[-1])
 
 def get_image(image_path, image_size, is_crop=True, resize_w=64, is_grayscale=False):
     # return transform(imread(image_path, is_grayscale), image_size, is_crop, resize_w)
+    print image_path
     return transform(imread(image_path, is_grayscale), image_size, is_crop)
 
 
@@ -86,34 +87,75 @@ def unison_shuffled_copies(a, b):
     p = np.random.permutation(len(a))
     return a[p], b[p]
 
+
+# def shuffle_in_unison(a, b):
+#     assert len(a) == len(b)
+#     shuffled_a = np.empty(len(a), dtype=type(a[0]))
+#     shuffled_b = np.empty(len(b), dtype=type(b[0]))
+#     permutation = np.random.permutation(len(a))
+#     for old_index, new_index in enumerate(permutation):
+#         shuffled_a[new_index] = a[old_index]
+#         shuffled_b[new_index] = b[old_index]
+#     return shuffled_a, shuffled_b
+
 def load_retina():
-    bg1 = glob.glob(os.path.join("./data", F.dataset, "BG1", "*.png"))
-    bg2 = glob.glob(os.path.join("./data", F.dataset, "BG2", "*.png"))
-    bg3 = glob.glob(os.path.join("./data", F.dataset, "BG3", "*.png"))
+    bg1 = glob.glob(os.path.join("./data", F.dataset, "Adversarial_BG1", "*.png"))
+    bg2 = glob.glob(os.path.join("./data", F.dataset, "Adversarial_BG2", "*.png"))
+    bg3 = glob.glob(os.path.join("./data", F.dataset, "Adversarial_BG3", "*.png"))
 
-    fg1 = glob.glob(os.path.join("./data", F.dataset, "FG1", "*.png"))
-    fg2 = glob.glob(os.path.join("./data", F.dataset, "FG2", "*.png"))
-    fg3 = glob.glob(os.path.join("./data", F.dataset, "FG3", "*.png"))
-
-    bg = [0]*(len(bg1) + len(bg2) + len(bg3))
-    fg = [1]*(len(fg1) + len(fg2) + len(fg3))
+    fg1 = glob.glob(os.path.join("./data", F.dataset, "Adversarial_FG1", "*.png"))
+    fg2 = glob.glob(os.path.join("./data", F.dataset, "Adversarial_FG2", "*.png"))
+    fg3 = glob.glob(os.path.join("./data", F.dataset, "Adversarial_FG3", "*.png"))
+    print "Glob reading done:  "
+    bg = [0]*(len(bg1)+ len(bg2) + len(bg3))
+    fg = [1]*(len(fg1)+ len(fg2) + len(fg3))
 
     labels = bg + fg
-    data_raw = bg1 + bg2 + bg3 + fg1 + fg2 + fg3
+    labels = np.asarray(labels, dtype=np.uint8)
+    print "Label creation done"
 
-    Y = np.zeros((len(labels), 3), dtype=np.float)
-    for i, label in enumerate(labels):
-        Y[i,labels[i]] = 1.0
+    #data_bg1 = [get_image(data_file, 32, is_crop=False, resize_w=32, is_grayscale = True) for data_file in bg1]
+    #X_bg1 = np.array(data_bg1).astype(np.float32)[:, :, :, None]
 
-    p = np.random.permutation(len(labels))
+    #data_bg2 = [get_image(data_file, 32, is_crop=False, resize_w=32, is_grayscale = True) for data_file in bg2]
+    #X_bg2 = np.array(data_bg2).astype(np.float32)[:, :, :, None]
+ 
+    #data_bg3 = [get_image(data_file, 32, is_crop=False, resize_w=32, is_grayscale = True) for data_file in bg3]
+    #X_bg3 = np.array(data_bg3).astype(np.float32)[:, :, :, None]
 
-    data_files = data_raw[:]
-    data = [get_image(data_file, 28, is_crop=False, resize_w=28, is_grayscale = True) for data_file in data_files]
+    #data_fg1 = [get_image(data_file, 32, is_crop=False, resize_w=32, is_grayscale = True) for data_file in fg1]
+    #X_fg1 = np.array(data_fg1).astype(np.float32)[:, :, :, None]
+
+    #data_fg2 = [get_image(data_file, 32, is_crop=False, resize_w=32, is_grayscale = True) for data_file in fg2]
+    #X_fg2 = np.array(data_fg2).astype(np.float32)[:, :, :, None]
+
+    #data_fg3 = [get_image(data_file, 32, is_crop=False, resize_w=32, is_grayscale = True) for data_file in fg3]
+    #X_fg3 = np.array(data_fg3).astype(np.float32)[:, :, :, None]
+
+    #X = np.concatenate((X_bg1,X_bg2,X_bg3,X_fg1,X_fg2,X_fg3), axis =0)
+
+
+    data_raw = bg1  + bg2 + bg3 + fg1 + fg2 + fg3
+    #data_raw = bg1 + fg1
+    
+
+    #Y = np.zeros((len(labels), 3), dtype=np.float)
+    #for i, label in enumerate(labels):
+    #    Y[i,labels[i]] = 1.0
+
+    data_raw = data_raw
+    data_files = data_raw[0:1025]
+    data = [get_image(data_file, 32, is_crop=False, resize_w=32, is_grayscale = True) for data_file in data_files]
     X = np.array(data).astype(np.float32)[:, :, :, None]
-
-    X, Y = unison_shuffled_copies(X, Y)
-
-    return X, Y
+    # X = data_files
+    print "Data array created"
+    
+    
+    #X = X/127.5 -1   # for proper feed to discriminator net in GAN setup
+    X, Y = unison_shuffled_copies(X, labels[0:1025])
+    # X, Y = shuffle_in_unison(X, labels[0:1025])
+    print "Labels are:: ", Y[1:30]
+    return X, Y[0:1025]
 
 
 def load_mnist():
@@ -140,7 +182,8 @@ def load_mnist():
 
     X = np.concatenate((trX, teX), axis=0)
     y = np.concatenate((trY, teY), axis=0)
-
+    #y.astype(np.uint8)
+    #print "Some lbl:::::: ", y[0:22]
 
 ############# one hot vector #################
     # Y = np.zeros((70000, 11), dtype = "int")
@@ -148,10 +191,11 @@ def load_mnist():
 
     Y = np.zeros((len(y), 11), dtype=np.float)
     for i, label in enumerate(y):
-        Y[i,y[i]] = 1.0
+        
+        Y[i,int(y[i])] = 1.0
 ##############################################
 
-    np.random.shuffle(X)
+    X, Y = unison_shuffled_copies(X, Y)
     return X / 127.5 - 1, Y
 
 

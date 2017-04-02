@@ -2,7 +2,7 @@ import os
 import sys
 import scipy.misc
 import numpy as np
-
+#from model_variable_batch_size import PreGAN
 from model import PreGAN
 from utils import pp, visualize, to_json
 
@@ -10,16 +10,16 @@ import tensorflow as tf
 #from inception_score import inception_score
 
 flags = tf.app.flags
-flags.DEFINE_integer("epoch", 100, "Epochs to train ")
-flags.DEFINE_float("learning_rate_D", 0.0001, "Learning rate of adam [0.0001]")
-flags.DEFINE_float("learning_rate_G", 0.0001, "Learning rate of adam [0.0001]")
+flags.DEFINE_integer("epoch", 100000, "Epochs to train ")
+flags.DEFINE_float("learning_rate_D", 0.00001, "Learning rate of adam [0.0001]")
+flags.DEFINE_float("learning_rate_G", 0.00001, "Learning rate of adam [0.0001]")
 flags.DEFINE_float("beta1D", 0.5, "Momentum term of adam [0.5]")
-flags.DEFINE_float("beta1G", 0.6, "Momentum term of adam [0.5]")
-flags.DEFINE_integer("decay_step", 20, "Decay step of learning rate in epochs")
+flags.DEFINE_float("beta1G", 0.5, "Momentum term of adam [0.5]")
+flags.DEFINE_integer("decay_step",15 , "Decay step of learning rate in epochs")
 flags.DEFINE_float("decay_rate", 0.8, "Decay rate of learning rate")
 flags.DEFINE_float("eps", 1e-7, "Epsilon")
 flags.DEFINE_float("var", 0.01, "Variance")
-flags.DEFINE_float("gpu_frac", 0.5, "Gpu fraction")
+flags.DEFINE_float("gpu_frac", 0.95, "Gpu fraction")
 
 dataset = "retina"
 flags.DEFINE_string("dataset", dataset, "The name of dataset [celebA, mnist, lsun]")
@@ -46,7 +46,7 @@ elif dataset == "lsun" or dataset == "lfw":
 elif dataset == "retina":
     flags.DEFINE_integer("c_dim", 1, "Number of channels in input image")
     flags.DEFINE_boolean("is_grayscale", True, "True for grayscale image")
-    flags.DEFINE_integer("output_size", 28, "True for grayscale image")	
+    flags.DEFINE_integer("output_size", 32, "True for grayscale image")	
 
 else:
     flags.DEFINE_integer("c_dim", 3, "Number of channels in input image")
