@@ -22,7 +22,6 @@ get_stddev = lambda x, k_h, k_w: 1 / math.sqrt(k_w * k_h * x.get_shape()[-1])
 
 def get_image(image_path, image_size, is_crop=True, resize_w=64, is_grayscale=False):
     # return transform(imread(image_path, is_grayscale), image_size, is_crop, resize_w)
-    print image_path
     return transform(imread(image_path, is_grayscale), image_size, is_crop)
 
 
@@ -87,17 +86,6 @@ def unison_shuffled_copies(a, b):
     p = np.random.permutation(len(a))
     return a[p], b[p]
 
-
-# def shuffle_in_unison(a, b):
-#     assert len(a) == len(b)
-#     shuffled_a = np.empty(len(a), dtype=type(a[0]))
-#     shuffled_b = np.empty(len(b), dtype=type(b[0]))
-#     permutation = np.random.permutation(len(a))
-#     for old_index, new_index in enumerate(permutation):
-#         shuffled_a[new_index] = a[old_index]
-#         shuffled_b[new_index] = b[old_index]
-#     return shuffled_a, shuffled_b
-
 def load_retina():
     bg1 = glob.glob(os.path.join("./data", F.dataset, "Adversarial_BG1", "*.png"))
     bg2 = glob.glob(os.path.join("./data", F.dataset, "Adversarial_BG2", "*.png"))
@@ -143,19 +131,18 @@ def load_retina():
     #for i, label in enumerate(labels):
     #    Y[i,labels[i]] = 1.0
 
+    #p = np.random.permutation(len(labels))
     data_raw = data_raw
-    data_files = data_raw[0:1025]
+    data_files = data_raw[:]
     data = [get_image(data_file, 32, is_crop=False, resize_w=32, is_grayscale = True) for data_file in data_files]
     X = np.array(data).astype(np.float32)[:, :, :, None]
-    # X = data_files
     print "Data array created"
     
     
     #X = X/127.5 -1   # for proper feed to discriminator net in GAN setup
-    X, Y = unison_shuffled_copies(X, labels[0:1025])
-    # X, Y = shuffle_in_unison(X, labels[0:1025])
+    X, Y = unison_shuffled_copies(X, labels)
     print "Labels are:: ", Y[1:30]
-    return X, Y[0:1025]
+    return X, Y
 
 
 def load_mnist():
