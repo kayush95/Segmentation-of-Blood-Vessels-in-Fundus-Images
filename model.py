@@ -34,7 +34,7 @@ class PreGAN(object):
 	def build_model(self):
 		self.images = tf.placeholder(tf.float32, [F.batch_size, F.output_size, F.output_size, F.c_dim], name='real_images')
 
-		self.labels = tf.placeholder(tf.uint8, [F.batch_size], name='real_labels')  
+		self.labels = tf.placeholder(tf.int64, [F.batch_size], name='real_labels')  
 		self.labels_1_hot = tf.one_hot(self.labels, depth=n_labels+1, dtype = tf.float32)
 		self.z = tf.placeholder(tf.float32, [None, F.z_dim], name='z')
 		self.keep_prob = tf.placeholder(tf.float32)
@@ -64,14 +64,21 @@ class PreGAN(object):
 		self.g_loss_actual = -1* tf.reduce_mean(
 				tf.nn.sigmoid_cross_entropy_with_logits(labels = self.one_hot_fake ,logits = self.D_logits_))
 				
-		#=============================================
-				
+		#=============================================			
 		self.g_loss = tf.constant(0)  # please ignore for time being
 
 		#  Calculate batchwise classification accuracy based on segmentation labels on real images==========
 		self.D_class_labels_tensor = tf.slice(self.D, begin=(0,0), size=(-1,2))  #change
 		self.D_class_labels = tf.argmax(self.D_class_labels_tensor, axis = 1)   #axis = 1
-				#===================
+		#=============================================
+
+		####################### tensorboard visualiztion ##########################
+		self.correct_prediction = tf.equal(self.D_class_labels, self.labels) 
+		self.accuracy_batch = tf.reduce_mean(tf.cast(self.correct_prediction, tf.float32))
+		# self.train_accuracy = tf.scalar_summary("train_accuracy", self.accuracy_batch)
+		tf.summary.scalar("train_accuracy", self.accuracy_batch)
+		self.summary_op = tf.summary.merge_all()
+		###########################################################################	
 		
 
 		t_vars = tf.trainable_variables()
@@ -111,7 +118,7 @@ class PreGAN(object):
 		#	 self.g_loss_actual_sum])
 		#self.d_sum = tf.merge_summary(
 		#	[self.z_sum, self.d_sum, self.d_loss_real_sum, self.d_loss_sum])
-		#self.writer = tf.train.SummaryWriter(F.log_dir, self.sess.graph)
+		self.writer = tf.summary.FileWriter(F.log_dir, self.sess.graph)
 
 		counter = 0
 		start_time = time.time()
@@ -154,8 +161,8 @@ class PreGAN(object):
 				# sample_images = np.array(data).astype(np.float32)[:, :, :, None]
 
 				# Update D network     ################ updated ############
-				_,  dlossf = self.sess.run(
-					[d_optim,  self.d_loss_fake],
+				_,  dlossf, summary = self.sess.run(
+					[d_optim,  self.d_loss_fake, self.summary_op],
 					feed_dict={self.images: sample_images, self.labels: sample_labels, self.z: sample_z,
 							   self.keep_prob:0.5, global_step: epoch})
 				
@@ -179,20 +186,30 @@ class PreGAN(object):
 				errD_real = self.d_loss_real.eval({self.images: sample_images, self.labels: sample_labels, self.keep_prob:0.5})
 				errG = self.g_loss.eval({self.z: sample_z, self.labels: sample_labels, self.keep_prob:0.5})
 				errG_actual = self.g_loss_actual.eval({self.z: sample_z, self.labels: sample_labels, self.keep_prob:0.5})
+
+
 				pred_class_labels = self.D_class_labels.eval({self.images : sample_images, self.keep_prob:0.5})
+
 				lrateD = learning_rate_D.eval({global_step: epoch})
 				lrateG = learning_rate_G.eval({global_step: epoch})
-				#print "Predicted labels::"
+
+				#print "Predicted labels:"
 				#print pred_class_labels
 				# Calculate classification accuracy each batch==============
+
+				############################# previously used #########################################
 				correct_rate = (pred_class_labels == sample_labels)
 				correct_rate.astype(np.float32)
 				accuracy_batch = np.mean(correct_rate)
+				# train_accuracy_batch = self.accuracy_batch.eval({self.images : sample_images, self.labels: sample_labels, self.keep_prob:0.5})
+				self.writer.add_summary(summary, epoch*data.num_batches + idx)
+				###################################################################
+
 				#print "accuracy: ", accuracy_batch
 				counter += 1
 				idx += 1
 				print(("Epoch:[%2d] [%4d/%4d] l_D:%.2e l_G:%.2e d_loss_f:%.8f d_loss_r:%.8f " +
-					  "acuracy:%.8f g_loss_act:%.8f  iscore:%f %f")
+					  "accuracy:%.8f g_loss_act:%.8f  iscore:%f %f")
 					  % (epoch, idx, data.num_batches, lrateD, lrateG, errD_fake,
 						 errD_real, accuracy_batch, errG_actual,  iscore[0], iscore[1]))
 
@@ -210,16 +227,7 @@ class PreGAN(object):
 					self.save(F.checkpoint_dir)
 					print("Saving checkpoints ")
 										
-################ Ignore this ###################
-       #  self.g_loss_sum = tf.scalar_summary("g_loss", self.g_loss)
-       #  self.d_loss_sum = tf.scalar_summary("d_loss", self.d_loss)
-       #  self.g_sum = tf.merge_summary([self.z_sum, self.d__sum, self.G_sum, self.d_loss_fake_sum, self.g_loss_sum])
-       #  self.d_sum = tf.merge_summary([self.z_sum, self.d_sum, self.d_loss_real_sum, self.d_loss_sum])
-       #  self.writer = tf.train.SummaryWriter("./logs", self.sess.graph)
-       # _, summary_str = self.sess.run([d_optim, self.d_sum],
-       #      feed_dict={ self.images: batch_images, self.z: batch_z, self.y:batch_labels })
-       #  self.writer.add_summary(summary_str, counter)
-################################################								  
+								  
 			
 			
 			sample_z = np.random.uniform(self.ra, self.rb, [F.batch_size, F.z_dim]).astype(np.float32)
@@ -243,8 +251,7 @@ class PreGAN(object):
 
 		samples = []
 		for k in range(50000 // F.batch_size):
-			sample_z = np.random.uniform(
-				self.ra, self.rb, [F.batch_size, F.z_dim]).astype(np.float32)
+			sample_z = np.random.uniform(self.ra, self.rb, [F.batch_size, F.z_dim]).astype(np.float32)
 			images = self.sess.run(self.G_mean, {self.z: sample_z})
 			samples.append(images)
 		samples = np.vstack(samples)

@@ -53,72 +53,75 @@ def discriminator_old(image, keep_prob, reuse =None):
 	return tf.nn.sigmoid(h9), h9
 
 def discriminator(image, keep_prob, reuse =None):
-    fc_hidden_units1 = 512
-    train_phase = False
-    PATCH_DIM = 32 
-    NUM_CLASSES = 3
+	fc_hidden_units1 = 512
+	train_phase = False
+	PATCH_DIM = 32 
+	NUM_CLASSES = 3
 
-    with tf.variable_scope('D'):
+	with tf.variable_scope('D'):
 		if reuse:
 			tf.get_variable_scope().reuse_variables()
 
+		fc_hidden_units1 = 512
+		train_phase = True
+		PATCH_DIM = 32 
+		NUM_CLASSES = 3
 
+		with tf.variable_scope('d_h_conv1') as scope:
+			weights = tf.get_variable('weights', shape=[4, 4, 1, 64], 
+									  initializer=tf.contrib.layers.xavier_initializer_conv2d())
+			biases = tf.get_variable('biases', shape=[64], initializer=tf.constant_initializer(0.05))
+											
+			# Flattening the 3D image into a 1D array
+			x_image = tf.reshape(image, [-1, PATCH_DIM, PATCH_DIM, 1])		        
+			# x_image_bn = batch_norm_layer(x_image, train_phase, scope.name)	
+			x_image_bn = x_image		        
+			z = tf.nn.conv2d(x_image_bn, weights, strides=[1, 1, 1, 1], padding='VALID') + biases			        
+			h_conv1 = tf.nn.relu(z, name=scope.name)
+			
+		with tf.variable_scope('d_h_conv2') as scope:
+			weights = tf.get_variable('weights', shape=[4, 4, 64, 64], 
+									  initializer=tf.contrib.layers.xavier_initializer_conv2d())
+			biases = tf.get_variable('biases', shape=[64], initializer=tf.constant_initializer(0.05))			   			        
+			# h_conv1_bn = batch_norm_layer(h_conv1, train_phase, scope.name)
+			h_conv1_bn = h_conv1
+			z = tf.nn.conv2d(h_conv1_bn, weights, strides=[1, 1, 1, 1], padding='SAME')+biases			        
+			h_conv2 = tf.nn.relu(z, name=scope.name)	
 
-	with tf.variable_scope('d_h_conv1') as scope:
-		weights = tf.get_variable('weights', shape=[4, 4, 1, 64], 
-								  initializer=tf.contrib.layers.xavier_initializer_conv2d())
-		biases = tf.get_variable('biases', shape=[64], initializer=tf.constant_initializer(0.05))
-										
-		# Flattening the 3D image into a 1D array
-		x_image = tf.reshape(image, [-1, PATCH_DIM, PATCH_DIM, 1])		        
-		# x_image_bn = batch_norm_layer(x_image, train_phase, scope.name)	
-		x_image_bn = x_image		        
-		z = tf.nn.conv2d(x_image_bn, weights, strides=[1, 1, 1, 1], padding='VALID') + biases			        
-		h_conv1 = tf.nn.relu(z, name=scope.name)
+		h_pool1 = tf.nn.max_pool(h_conv2, ksize=[1, 2, 2, 1],
+							strides=[1, 2, 2, 1], padding='SAME', name='h_pool1')
 		
-	with tf.variable_scope('d_h_conv2') as scope:
-		weights = tf.get_variable('weights', shape=[4, 4, 64, 64], 
-								  initializer=tf.contrib.layers.xavier_initializer_conv2d())
-		biases = tf.get_variable('biases', shape=[64], initializer=tf.constant_initializer(0.05))			   			        
-		# h_conv1_bn = batch_norm_layer(h_conv1, train_phase, scope.name)
-		h_conv1_bn = h_conv1
-		z = tf.nn.conv2d(h_conv1_bn, weights, strides=[1, 1, 1, 1], padding='SAME')+biases			        
-		h_conv2 = tf.nn.relu(z, name=scope.name)	
-
-	h_pool1 = tf.nn.max_pool(h_conv2, ksize=[1, 2, 2, 1],
-						strides=[1, 2, 2, 1], padding='SAME', name='h_pool1')
-	
-	with tf.variable_scope('d_h_conv3') as scope:
-		weights = tf.get_variable('weights', shape=[4, 4, 64, 64], 
-								  initializer=tf.contrib.layers.xavier_initializer_conv2d())
-		biases = tf.get_variable('biases', shape=[64], initializer=tf.constant_initializer(0.05))			        			        
-		# h_pool1_bn = batch_norm_layer(h_pool1, train_phase, scope.name)
-		h_pool1_bn = h_pool1
-		z = tf.nn.conv2d(h_pool1_bn, weights, strides=[1, 1, 1, 1], padding='SAME')+biases			        
-		h_conv3 = tf.nn.relu(z, name=scope.name)
-		
-	h_pool2 = tf.nn.max_pool(h_conv3, ksize=[1, 2, 2, 1],
-						strides=[1, 2, 2, 1], padding='SAME', name='h_pool2')
-	
-	
-	with tf.variable_scope('d_h_fc1') as scope:
-		weights = tf.get_variable('weights', shape=[7**2*64, fc_hidden_units1], 
-								  initializer=tf.contrib.layers.xavier_initializer())
-		biases = tf.get_variable('biases', shape=[fc_hidden_units1], initializer=tf.constant_initializer(0.05))		        			        
-		h_pool2_flat = tf.reshape(h_pool2, [-1, 7*7*64])		        			        
-		#h_pool2_flat_bn = batch_norm_layer(h_pool2_flat, train_phase, scope.name)		        
-		h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, weights) + biases, name = 'h_fc1')			        
-		h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob)
+		with tf.variable_scope('d_h_conv3') as scope:
+			weights = tf.get_variable('weights', shape=[4, 4, 64, 64], 
+									  initializer=tf.contrib.layers.xavier_initializer_conv2d())
+			biases = tf.get_variable('biases', shape=[64], initializer=tf.constant_initializer(0.05))			        			        
+			# h_pool1_bn = batch_norm_layer(h_pool1, train_phase, scope.name)
+			h_pool1_bn = h_pool1
+			z = tf.nn.conv2d(h_pool1_bn, weights, strides=[1, 1, 1, 1], padding='SAME')+biases			        
+			h_conv3 = tf.nn.relu(z, name=scope.name)
+			
+		h_pool2 = tf.nn.max_pool(h_conv3, ksize=[1, 2, 2, 1],
+							strides=[1, 2, 2, 1], padding='SAME', name='h_pool2')
 		
 		
-	with tf.variable_scope('d_h_fc2') as scope:
-		weights = tf.get_variable('weights', shape=[fc_hidden_units1, NUM_CLASSES], 
-								  initializer=tf.contrib.layers.xavier_initializer())
-		biases = tf.get_variable('biases', shape=[NUM_CLASSES])
-		#h_fc1_drop_bn = batch_norm_layer(h_fc1, train_phase, scope.name)			        
-		logits = (tf.matmul(h_fc1_drop, weights) + biases)
-		
-	return tf.nn.sigmoid(logits), logits
+		with tf.variable_scope('d_h_fc1') as scope:
+			weights = tf.get_variable('weights', shape=[8**2*64, fc_hidden_units1], 
+									  initializer=tf.contrib.layers.xavier_initializer())
+			biases = tf.get_variable('biases', shape=[fc_hidden_units1], initializer=tf.constant_initializer(0.05))		        			        
+			h_pool2_flat = tf.reshape(h_pool2, [-1, 8*8*64])		        			        
+			#h_pool2_flat_bn = batch_norm_layer(h_pool2_flat, train_phase, scope.name)		        
+			h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, weights) + biases, name = 'h_fc1')			        
+			h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob)
+			
+			
+		with tf.variable_scope('d_h_fc2') as scope:
+			weights = tf.get_variable('weights', shape=[fc_hidden_units1, NUM_CLASSES], 
+									  initializer=tf.contrib.layers.xavier_initializer())
+			biases = tf.get_variable('biases', shape=[NUM_CLASSES])
+			#h_fc1_drop_bn = batch_norm_layer(h_fc1, train_phase, scope.name)			        
+			logits = (tf.matmul(h_fc1_drop, weights) + biases)
+			
+		return tf.nn.sigmoid(logits), logits
 
 
 
@@ -173,7 +176,7 @@ def main():
 		gt = Image.open(os.path.join(gt_dir, img_number+'_manual1.gif'))
 		gt_image = np.asarray(gt, dtype=np.float32)
 		gt_image = gt_image/255.
-                #print "Range of test and gt", test_img.min(), test_img.max(), gt_image.min(), gt_image.max()
+				#print "Range of test and gt", test_img.min(), test_img.max(), gt_image.min(), gt_image.max()
 		fov = Image.open(os.path.join(fov_dir, img_number+'_test_mask.gif'))
 		fov_image = np.asarray(fov)
 		[ori_H, ori_W] = test_img.shape
@@ -197,21 +200,21 @@ def main():
 		print "Shape of test patches: ", test_patches.shape
 		print "Shape of gt_patches: ", gt_patches.shape
 		time.sleep(10)
-                #print "Range of test and gt", test_img_padded.min(), test_img_padded.max(), gt_image_padded.min(), gt_image_padded.max()
-                #============ Save original and padded images and maps
-                t= np.reshape((test_img*127.5 +1.0),(ori_H,ori_W)) 
-                g =np.reshape(gt_image, (ori_H, ori_W))
-                t_p = np.reshape(test_img_padded*127.5+1, (p_H,p_W))
-                g_p = np.reshape(gt_image_padded, (p_H, p_W))
-                print "test image shape*****", t.shape
-                scipy.misc.imsave("test_img.png", t)
-                scipy.misc.imsave("gt_img.png", g)
-                scipy.misc.imsave("test_img_padded.png", t_p)
-                scipy.misc.imsave("gt_img_padded.png", g_p)
-                
-                #----------------------------------------------------------------------------------
-                print "Images dumped success::  "
-                #sys.exit()
+		#print "Range of test and gt", test_img_padded.min(), test_img_padded.max(), gt_image_padded.min(), gt_image_padded.max()
+		#============ Save original and padded images and maps
+		t= np.reshape((test_img*127.5 +1.0),(ori_H,ori_W)) 
+		g =np.reshape(gt_image, (ori_H, ori_W))
+		t_p = np.reshape(test_img_padded*127.5+1, (p_H,p_W))
+		g_p = np.reshape(gt_image_padded, (p_H, p_W))
+		print "test image shape*****", t.shape
+		scipy.misc.imsave("test_img.png", t)
+		scipy.misc.imsave("gt_img.png", g)
+		scipy.misc.imsave("test_img_padded.png", t_p)
+		scipy.misc.imsave("gt_img_padded.png", g_p)
+		
+		#----------------------------------------------------------------------------------
+		print "Images dumped success::  "
+		#sys.exit()
 	   #==== make placeholders for storing batchwise prediction results ===============
 		predictions = np.zeros((test_patches.shape[0]))
 		total_full_batches = int(predictions.shape[0]/ batch_size)
@@ -260,13 +263,13 @@ def main():
 		assert(pred_image.shape == gtruth.shape)
 		#=========================================================================
 
-                #===== saving of Recomposed Images and Maps images==================
-                pi = np.reshape((pred_image*127.5 + 1.0),(p_H,p_W))
-                gtru = np.reshape(gtruth, (p_H,p_W))
-                scipy.misc.imsave(img_number+"pred_image.png", pi)
-                scipy.misc.imsave(img_number+"gtruth_recomposed.png", gtru)
-                #save_images(pred_image, [1,1], "pred_image.png")
-                #save_images(gtruth, [1,1], "gtruth_recomposed.png")
+		#===== saving of Recomposed Images and Maps images==================
+		pi = np.reshape((pred_image*127.5 + 1.0),(p_H,p_W))
+		gtru = np.reshape(gtruth, (p_H,p_W))
+		scipy.misc.imsave(img_number+"pred_image.png", pi)
+		scipy.misc.imsave(img_number+"gtruth_recomposed.png", gtru)
+		#save_images(pred_image, [1,1], "pred_image.png")
+		#save_images(gtruth, [1,1], "gtruth_recomposed.png")
 
 
 		#======================== visualization ==================================
