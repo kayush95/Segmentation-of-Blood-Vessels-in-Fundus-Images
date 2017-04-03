@@ -144,7 +144,7 @@ def load_retina():
     #    Y[i,labels[i]] = 1.0
 
     data_raw = data_raw
-    data_files = data_raw[0:1025]
+    data_files = data_raw#[0:1025]
     data = [get_image(data_file, 32, is_crop=False, resize_w=32, is_grayscale = True) for data_file in data_files]
     X = np.array(data).astype(np.float32)[:, :, :, None]
     # X = data_files
@@ -152,7 +152,7 @@ def load_retina():
     
     
     #X = X/127.5 -1   # for proper feed to discriminator net in GAN setup
-    X, Y = unison_shuffled_copies(X, labels[0:1025])
+    X, Y = unison_shuffled_copies(X, labels)
     # X, Y = shuffle_in_unison(X, labels[0:1025])
     print "Labels are:: ", Y[1:30]
     return X, Y
