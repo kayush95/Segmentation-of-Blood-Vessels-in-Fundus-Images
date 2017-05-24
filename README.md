@@ -1,2 +1,2 @@
-# semisupervised_GAN
-Vessel Segmentation using Semi Supervised GAN
+# Vessel Segmentation using Semi Supervised GAN
+Work under progress
